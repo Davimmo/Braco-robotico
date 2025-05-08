@@ -7,13 +7,12 @@ float angulo2 = 0.0f;
 float angulo3 = 0.0f;
 float aberturaGarra = 15.0f;
 int segmentoSelecionado = 1;
+
 float cameraX = 0.0f, cameraY = 0.0f;
 float zoom = 1.0f;
-
 int lastMouseX = 0, lastMouseY = 0;
 bool arrastandoDireita = false;
 
-// Desenha um retângulo com a base centralizada
 void desenhaRetangulo(float largura, float altura) {
     glBegin(GL_POLYGON);
     glVertex2f(-largura / 2.0f, 0.0f);
@@ -23,7 +22,6 @@ void desenhaRetangulo(float largura, float altura) {
     glEnd();
 }
 
-// Desenha um círculo
 void desenhaCirculo(float raio, int segmentos = 30) {
     glBegin(GL_POLYGON);
     for (int i = 0; i < segmentos; ++i) {
@@ -33,35 +31,23 @@ void desenhaCirculo(float raio, int segmentos = 30) {
     glEnd();
 }
 
-void desenhaArco(float raio, float angInicial, float angFinal, int segmentos = 20) {
-    glBegin(GL_LINE_STRIP);
-    for (int i = 0; i <= segmentos; ++i) {
-        float ang = angInicial + (angFinal - angInicial) * i / segmentos;
-        glVertex2f(cos(ang) * raio, sin(ang) * raio);
-    }
-    glEnd();
-}
-
 void desenhaGarra(float abertura) {
     float deslocamento = abertura * 0.5f;
 
-    // Suporte central da garra
     glColor3f(0.3f, 0.3f, 0.3f);
     desenhaRetangulo(10.0f, 10.0f);
 
-    // Garra esquerda
     glPushMatrix();
-        glTranslatef(-7.5f, 10.0f, 0.0f); // Ponto de rotação na base do suporte
-        glRotatef(-abertura, 0, 0, 1);   // Rotação ao redor do ponto fixo
-        glTranslatef(0.0f, 20.0f, 0.0f); // Move para o centro do dedo
+        glTranslatef(-7.5f, 10.0f, 0.0f);
+        glRotatef(-abertura, 0, 0, 1);
+        glTranslatef(0.0f, 20.0f, 0.0f);
         glColor3f(0.7f, 0.7f, 0.7f);
         desenhaRetangulo(5.0f, 40.0f);
     glPopMatrix();
 
-    // Garra direita
     glPushMatrix();
-        glTranslatef(7.5f, 10.0f, 0.0f);  // Ponto de rotação na base do suporte
-        glRotatef(abertura, 0, 0, 1);    // Rotação espelhada
+        glTranslatef(7.5f, 10.0f, 0.0f);
+        glRotatef(abertura, 0, 0, 1);
         glTranslatef(0.0f, 20.0f, 0.0f);
         glColor3f(0.7f, 0.7f, 0.7f);
         desenhaRetangulo(5.0f, 40.0f);
@@ -71,62 +57,72 @@ void desenhaGarra(float abertura) {
 void display() {
     glClear(GL_COLOR_BUFFER_BIT);
     glLoadIdentity();
+    glScalef(zoom, zoom, 1.0f);
+    glTranslatef(-cameraX, -cameraY, 0.0f);
 
-    // Translada a base
     glTranslatef(baseX, 0.0f, 0.0f);
 
-    // Base
     glColor3f(0.2f, 0.2f, 0.8f);
     desenhaRetangulo(40.0f, 20.0f);
 
-    glTranslatef(0.0f, 20.0f, 0.0f); // Centro da base
+    glTranslatef(0.0f, 20.0f, 0.0f);
 
-    // *** Junta circular entre a base e o braço ***
+    // Junta circular entre base e braço
     glColor3f(0.8f, 0.5f, 0.2f);
-    desenhaCirculo(6.0f); // <-- Junta adicionada aqui
+    desenhaCirculo(6.0f);
 
-    // Braço
     glPushMatrix();
     glRotatef(angulo1, 0, 0, 1);
     glColor3f(0.6f, 0.6f, 0.6f);
     desenhaRetangulo(20.0f, 60.0f);
 
-    // Junta circular entre braço e antebraço
     glTranslatef(0.0f, 60.0f, 0.0f);
     glColor3f(0.8f, 0.8f, 0.2f);
     desenhaCirculo(6.0f);
 
-    // Antebraço
     glPushMatrix();
     glRotatef(angulo2, 0, 0, 1);
     glColor3f(0.3f, 0.6f, 0.3f);
     desenhaRetangulo(15.0f, 50.0f);
 
-    // Junta circular entre antebraço e pulso
     glTranslatef(0.0f, 50.0f, 0.0f);
     glColor3f(0.6f, 0.3f, 0.3f);
     desenhaCirculo(5.0f);
 
-    // Pulso
     glPushMatrix();
     glRotatef(angulo3, 0, 0, 1);
     glColor3f(0.9f, 0.7f, 0.2f);
     desenhaRetangulo(10.0f, 40.0f);
-
-    // Garra
     desenhaGarra(aberturaGarra);
-    glPopMatrix(); // Fim pulso
+    glPopMatrix();
 
-    glPopMatrix(); // Fim antebraço
-    glPopMatrix(); // Fim braço
+    glPopMatrix();
+    glPopMatrix();
 
     // Instruções
     glLoadIdentity();
     glColor3f(1, 1, 1);
-    glRasterPos2f(-290, 200);
-    const char *instr = "Teclas: [1-3] seleciona segmento | <- -> rotaciona | A D move base | W S abre/fecha garra";
-    for (const char *p = instr; *p; p++)
-        glutBitmapCharacter(GLUT_BITMAP_8_BY_13, *p);
+    const char* instrucoes[] = {
+        "Teclas:",
+        "[1-3] Seleciona segmento manualmente",
+        "<-  -> Rotaciona segmento selecionado",
+        "A / D Move base horizontalmente",
+        "W / S Abre ou fecha a garra",
+        "ESC Fecha o programa",
+        "",
+        "Mouse:",
+        "Botao Esquerdo: Seleciona junta clicando sobre ela",
+        "Botao Direito: Arrasta a cena (camera)",
+        "Scroll: Zoom in / Zoom out"
+    };
+
+    int y = 200;
+    for (int i = 0; i < sizeof(instrucoes) / sizeof(instrucoes[0]); ++i) {
+        glRasterPos2f(-290, y);
+        for (const char* p = instrucoes[i]; *p; ++p)
+            glutBitmapCharacter(GLUT_BITMAP_8_BY_13, *p);
+        y -= 15;
+    }
 
     glutSwapBuffers();
 }
@@ -154,7 +150,7 @@ void teclado(unsigned char tecla, int x, int y) {
             aberturaGarra -= 2.0f;
             if (aberturaGarra < 0.0f) aberturaGarra = 0.0f;
             break;
-        case 27: exit(0); break; // ESC para sair
+        case 27: exit(0); break;
     }
     glutPostRedisplay();
 }
@@ -175,22 +171,6 @@ void teclasEspeciais(int tecla, int x, int y) {
     glutPostRedisplay();
 }
 
-int main(int argc, char **argv) {
-    glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
-    glutInitWindowSize(800, 600);
-    glutCreateWindow("Braco Robótico 2D");
-
-    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-
-    glutDisplayFunc(display);
-    glutReshapeFunc(reshape);
-    glutKeyboardFunc(teclado);
-    glutSpecialFunc(teclasEspeciais);
-
-    glutMainLoop();
-    return 0;
-}
 void mouse(int button, int state, int x, int y) {
     if (button == GLUT_RIGHT_BUTTON) {
         if (state == GLUT_DOWN) {
@@ -201,11 +181,9 @@ void mouse(int button, int state, int x, int y) {
             arrastandoDireita = false;
         }
     } else if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-        // Conversão de coordenadas de tela para mundo
         float mx = (x - 400) / zoom + cameraX;
         float my = (300 - y) / zoom + cameraY;
 
-        // Verifica proximidade com juntas (com tolerância)
         if (hypotf(mx - baseX, my - 20.0f) < 10.0f)
             segmentoSelecionado = 1;
         else if (hypotf(mx - baseX, my - (20.0f + 60.0f)) < 10.0f)
@@ -214,8 +192,15 @@ void mouse(int button, int state, int x, int y) {
             segmentoSelecionado = 3;
 
         glutPostRedisplay();
+    } else if (button == 3) { // Scroll up
+        zoom *= 1.1f;
+        glutPostRedisplay();
+    } else if (button == 4) { // Scroll down
+        zoom /= 1.1f;
+        glutPostRedisplay();
     }
 }
+
 
 void motion(int x, int y) {
     if (arrastandoDireita) {
@@ -233,4 +218,23 @@ void mouseWheel(int button, int dir, int x, int y) {
     if (dir > 0) zoom *= 1.1f;
     else if (dir < 0) zoom /= 1.1f;
     glutPostRedisplay();
+}
+
+int main(int argc, char** argv) {
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
+    glutInitWindowSize(800, 600);
+    glutCreateWindow("Braco Robótico 2D");
+
+    glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+
+    glutDisplayFunc(display);
+    glutReshapeFunc(reshape);
+    glutKeyboardFunc(teclado);
+    glutSpecialFunc(teclasEspeciais);
+    glutMouseFunc(mouse);
+    glutMotionFunc(motion);
+
+    glutMainLoop();
+    return 0;
 }
