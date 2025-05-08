@@ -1,6 +1,8 @@
 #include <GL/glut.h>
 #include <math.h>
-
+#ifndef M_PI
+    #define M_PI 3.14159265358979323846
+#endif
 float baseX = 0.0f;
 float angulo1 = 0.0f;
 float angulo2 = 0.0f;
@@ -181,17 +183,58 @@ void mouse(int button, int state, int x, int y) {
             arrastandoDireita = false;
         }
     } else if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-        float mx = (x - 400) / zoom + cameraX;
-        float my = (300 - y) / zoom + cameraY;
+        GLint viewport[4];
+        glGetIntegerv(GL_VIEWPORT, viewport);
+        
+        // Converter coordenadas do mouse para coordenadas do mundo
+        float worldWidth = 600.0f;  // right - left (300 - (-300))
+        float worldHeight = 300.0f; // top - bottom (250 - (-50))
+        
+        float mx = (x / (float)viewport[2]) * worldWidth - worldWidth/2.0f;
+        mx = mx / zoom + cameraX;
+        
+        float my = ((viewport[3] - y) / (float)viewport[3]) * worldHeight - 50.0f;
+        my = my / zoom + cameraY;
 
-        if (hypotf(mx - baseX, my - 20.0f) < 10.0f)
+
+        // Coordenadas das juntas no espaço do mundo
+        float joint1X = baseX;
+        float joint1Y = 20.0f;
+        
+        // Debug: Mostrar posição esperada da junta 1
+
+        // Verificar junta 1 (base)
+        if (hypotf(mx - joint1X, my - joint1Y) < 10.0f) {
             segmentoSelecionado = 1;
-        else if (hypotf(mx - baseX, my - (20.0f + 60.0f)) < 10.0f)
-            segmentoSelecionado = 2;
-        else if (hypotf(mx - baseX, my - (20.0f + 60.0f + 50.0f)) < 10.0f)
-            segmentoSelecionado = 3;
+            glutPostRedisplay();
+            return;
+        }
 
-        glutPostRedisplay();
+        // Calcular posição da junta 2 após rotação 1
+        float ang1_rad = angulo1 * M_PI / 180.0f;
+        float joint2X = joint1X + sin(ang1_rad) * 60.0f;
+        float joint2Y = joint1Y + cos(ang1_rad) * 60.0f;
+
+
+        // Verificar junta 2
+        if (hypotf(mx - joint2X, my - joint2Y) < 10.0f) {
+            segmentoSelecionado = 2;
+            glutPostRedisplay();
+            return;
+        }
+
+        // Calcular posição da junta 3 após rotação 1 e 2
+        float ang2_rad = (angulo1 + angulo2) * M_PI / 180.0f;
+        float joint3X = joint2X + sin(ang2_rad) * 50.0f;
+        float joint3Y = joint2Y + cos(ang2_rad) * 50.0f;
+
+
+        // Verificar junta 3
+        if (hypotf(mx - joint3X, my - joint3Y) < 8.0f) {
+            segmentoSelecionado = 3;
+            glutPostRedisplay();
+            return;
+        }
     } else if (button == 3) { // Scroll up
         zoom *= 1.1f;
         glutPostRedisplay();
@@ -200,7 +243,6 @@ void mouse(int button, int state, int x, int y) {
         glutPostRedisplay();
     }
 }
-
 
 void motion(int x, int y) {
     if (arrastandoDireita) {
@@ -212,12 +254,6 @@ void motion(int x, int y) {
         lastMouseY = y;
         glutPostRedisplay();
     }
-}
-
-void mouseWheel(int button, int dir, int x, int y) {
-    if (dir > 0) zoom *= 1.1f;
-    else if (dir < 0) zoom /= 1.1f;
-    glutPostRedisplay();
 }
 
 int main(int argc, char** argv) {
