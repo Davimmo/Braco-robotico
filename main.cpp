@@ -27,29 +27,28 @@ void desenhaRetangulo(float largura, float altura) {
 void desenhaCirculo(float raio, int segmentos = 30) {
     glBegin(GL_POLYGON);
     for (int i = 0; i < segmentos; ++i) {
-        float ang = 2.0f * 3.14159f * i / segmentos;
+        float ang = 2.0f * M_PI * i / segmentos;
         glVertex2f(cos(ang) * raio, sin(ang) * raio);
     }
     glEnd();
 }
 
 void desenhaGarra(float abertura) {
-    float deslocamento = abertura * 0.5f;
-
+    // Base da garra (parte fixa)
     glColor3f(0.3f, 0.3f, 0.3f);
     desenhaRetangulo(10.0f, 10.0f);
 
+    // Dedo esquerdo
     glPushMatrix();
-        glTranslatef(-7.5f, 10.0f, 0.0f);
-        glRotatef(-abertura, 0, 0, 1);
+        glTranslatef(-5.0f - abertura, 10.0f, 0.0f);  // Movimento horizontal para esquerda
         glTranslatef(0.0f, 20.0f, 0.0f);
         glColor3f(0.7f, 0.7f, 0.7f);
         desenhaRetangulo(5.0f, 40.0f);
     glPopMatrix();
 
+    // Dedo direito
     glPushMatrix();
-        glTranslatef(7.5f, 10.0f, 0.0f);
-        glRotatef(abertura, 0, 0, 1);
+        glTranslatef(5.0f + abertura, 10.0f, 0.0f);  // Movimento horizontal para direita
         glTranslatef(0.0f, 20.0f, 0.0f);
         glColor3f(0.7f, 0.7f, 0.7f);
         desenhaRetangulo(5.0f, 40.0f);
@@ -146,11 +145,11 @@ void teclado(unsigned char tecla, int x, int y) {
         case 'd': case 'D': baseX += 10.0f; break;
         case 'w': case 'W':
             aberturaGarra += 2.0f;
-            if (aberturaGarra > 45.0f) aberturaGarra = 45.0f;
+            if (aberturaGarra > 20.0f) aberturaGarra = 20.0f;  // Máximo de abertura
             break;
         case 's': case 'S':
             aberturaGarra -= 2.0f;
-            if (aberturaGarra < 0.0f) aberturaGarra = 0.0f;
+            if (aberturaGarra < 0.0f) aberturaGarra = 0.0f;  // Mínimo (dedos encostados)
             break;
         case 27: exit(0); break;
     }
@@ -186,9 +185,8 @@ void mouse(int button, int state, int x, int y) {
         GLint viewport[4];
         glGetIntegerv(GL_VIEWPORT, viewport);
         
-        // Converter coordenadas do mouse para coordenadas do mundo
-        float worldWidth = 600.0f;  // right - left (300 - (-300))
-        float worldHeight = 300.0f; // top - bottom (250 - (-50))
+        float worldWidth = 600.0f;
+        float worldHeight = 300.0f;
         
         float mx = (x / (float)viewport[2]) * worldWidth - worldWidth/2.0f;
         mx = mx / zoom + cameraX;
@@ -196,49 +194,38 @@ void mouse(int button, int state, int x, int y) {
         float my = ((viewport[3] - y) / (float)viewport[3]) * worldHeight - 50.0f;
         my = my / zoom + cameraY;
 
-
-        // Coordenadas das juntas no espaço do mundo
         float joint1X = baseX;
         float joint1Y = 20.0f;
         
-        // Debug: Mostrar posição esperada da junta 1
-
-        // Verificar junta 1 (base)
         if (hypotf(mx - joint1X, my - joint1Y) < 10.0f) {
             segmentoSelecionado = 1;
             glutPostRedisplay();
             return;
         }
 
-        // Calcular posição da junta 2 após rotação 1
         float ang1_rad = angulo1 * M_PI / 180.0f;
         float joint2X = joint1X + sin(ang1_rad) * 60.0f;
         float joint2Y = joint1Y + cos(ang1_rad) * 60.0f;
 
-
-        // Verificar junta 2
         if (hypotf(mx - joint2X, my - joint2Y) < 10.0f) {
             segmentoSelecionado = 2;
             glutPostRedisplay();
             return;
         }
 
-        // Calcular posição da junta 3 após rotação 1 e 2
         float ang2_rad = (angulo1 + angulo2) * M_PI / 180.0f;
         float joint3X = joint2X + sin(ang2_rad) * 50.0f;
         float joint3Y = joint2Y + cos(ang2_rad) * 50.0f;
 
-
-        // Verificar junta 3
         if (hypotf(mx - joint3X, my - joint3Y) < 8.0f) {
             segmentoSelecionado = 3;
             glutPostRedisplay();
             return;
         }
-    } else if (button == 3) { // Scroll up
+    } else if (button == 3) {
         zoom *= 1.1f;
         glutPostRedisplay();
-    } else if (button == 4) { // Scroll down
+    } else if (button == 4) {
         zoom /= 1.1f;
         glutPostRedisplay();
     }
